@@ -74,14 +74,22 @@ setRebalanceCallback f k e ps =
     KafkaResponseError RdKafkaRespErrAssignPartitions -> do
         mbq <- getRdMsgQueue $ getKafkaConf k
         f k (RebalanceBeforeAssign assignment)
-        void $ assign k ps
+        -- void $ assign k ps
+        err <- assign k ps
+        case err of
+          Nothing -> pure ()
+          Just ex -> print $ "ERRR!!! " ++ show ex
         case mbq of
           Nothing -> pure ()
           Just mq -> forM_ ps (\tp -> redirectPartitionQueue (getKafka k) (tpTopicName tp) (tpPartition tp) mq)
         f k (RebalanceAssign assignment)
     KafkaResponseError RdKafkaRespErrRevokePartitions -> do
         f k (RebalanceBeforeRevoke assignment)
-        void $ assign k []
+        -- void $ assign k []
+        err <- assign k []
+        case err of
+          Nothing -> pure ()
+          Just ex -> print $ "ERRR!!! " ++ show ex
         f k (RebalanceRevoke assignment)
     x -> error $ "Rebalance: UNKNOWN response: " <> show x
 
