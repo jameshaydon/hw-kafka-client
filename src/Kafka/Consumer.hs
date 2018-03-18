@@ -90,7 +90,7 @@ pollMessage :: MonadIO m
             -> Timeout -- ^ the timeout, in milliseconds
             -> m (Either KafkaError (ConsumerRecord (Maybe BS.ByteString) (Maybe BS.ByteString))) -- ^ Left on error or timeout, right for success
 pollMessage c@(KafkaConsumer _ (KafkaConf _ qr _)) (Timeout ms) = liftIO $ do
---    pollConsumerEvents c Nothing
+    pollConsumerEvents c Nothing
     mbq <- readIORef qr
     case mbq of
       Nothing -> return . Left $ KafkaBadSpecification "Messages queue is not configured, internal error, fatal."
@@ -220,7 +220,14 @@ position (KafkaConsumer (Kafka k) _) tps = liftIO $ do
 pollConsumerEvents :: KafkaConsumer -> Maybe Timeout -> IO ()
 pollConsumerEvents k timeout =
   let (Timeout tm) = fromMaybe (Timeout 0) timeout
-  in void $ rdKafkaConsumerPoll (getRdKafka k) tm
+  in do
+    res <- rdKafkaConsumerPoll (getRdKafka k) tm
+    withForeignPtr res $ \ptr ->
+      if ptr == nullPtr
+        then pure ()
+        else do
+          print "!!!MESSAGE DETECTED!!!"
+          error "!!!MESSAGE DETECTED!!!"
 
 -- | Closes the consumer.
 closeConsumer :: MonadIO m => KafkaConsumer -> m (Maybe KafkaError)
